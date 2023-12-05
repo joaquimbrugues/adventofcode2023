@@ -71,31 +71,34 @@ fn intersect(x: (u64, u64), map: (u64, u64, u64)) -> Vec<(u64, u64)> {
 fn run2(input: &str) -> u64 {
     let (head, tail) = input.split_once("\n\n").unwrap();
     let (_, head) = head.split_once(": ").unwrap();
-    let mut following: HashSet<(u64, u64)> = head.split_whitespace().step_by(2).zip(head.split_whitespace().skip(1).step_by(2)).map(|(s1, s2)| (s1.parse().unwrap(), s2.parse().unwrap())).collect();
-    for block in tail.split("\n\n") {
-        // TODO: Problem when joining intersections together...
-        let mut temp = HashSet::new();
-        let mut intersects = HashSet::new();
-        for line in block.lines().skip(1) {
-            let map: Vec<u64> = line.split_whitespace().map(|s| s.parse().unwrap()).collect();
-            assert_eq!(map.len(), 3);
-            let map = (map[0], map[1], map[2]);
-            for x in following.iter() {
-                let i = intersect(*x, map);
-                if i.len() > 0 {
-                    intersects.insert(x);
+    let seeds: Vec<(u64, u64)> = head.split_whitespace().step_by(2).zip(head.split_whitespace().skip(1).step_by(2)).map(|(s1, s2)| (s1.parse().unwrap(), s2.parse().unwrap())).collect();
+    let translations: Vec<_> = tail.split("\n\n").map(
+        |block| {
+            let block = block.split_once(":\n").unwrap().1;
+            let v: Vec<_> = block.lines().map(
+                |line| {
+                    let map: Vec<u64> = line.split_whitespace().map(|s| s.parse().unwrap()).collect();
+                    assert_eq!(map.len(), 3);
+                    (map[0], map[1], map[2])
                 }
-                for v in i {
-                    temp.insert(v);
-                }
+            ).collect();
+            v
+        }
+    ).collect();
+    let mut loc = 0;
+    loop {
+        let mut follow = loc;
+        for block in translations.iter().rev() {
+            if let Some(trans) = block.iter().find(|&(d,_,r)| follow >= *d && follow - d < *r) {
+                follow = trans.1 + follow - trans.0;
             }
+            // Else, do not alter follow
         }
-        for v in following.iter().filter(|f| !intersects.contains(f)) {
-            temp.insert(*v);
+        if seeds.iter().find(|(o, r)| follow >= *o && follow - o < *r ).is_some() {
+            return loc;
         }
-        following = temp;
+        loc += 1;
     }
-    following.into_iter().map(|(i,_)| i).min().unwrap()
 }
 
 fn main() {
@@ -193,9 +196,9 @@ fn intersection6() {
     assert_eq!(intersect(x,map), vec![(20, 10)]);
 }
 
-//#[test]
-//fn input2() {
-    //let input = fs::read_to_string("input.txt").unwrap();
-    //let res = run2(&input);
-    //assert_eq!(res,42);
-//}
+#[test]
+fn input2() {
+    let input = fs::read_to_string("input.txt").unwrap();
+    let res = run2(&input);
+    assert_eq!(res, 27992443);
+}
