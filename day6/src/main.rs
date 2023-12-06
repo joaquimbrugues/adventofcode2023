@@ -1,12 +1,20 @@
 use std::{env,fs,process};
 
-// Idea: each input has T and R (time and record) and we want to multiply every number in the range
-// of the integers solving the inequality T*x - x^2 >= R, i.e x^2 - T*x + R <= 0, so from
-// ceil(T/2 - sqrt( (T/2)^2 - R )) until floor(T/2 + sqrt( (T/2)^2 - R ))
-// CORRECTION: We want to multiply by x_i * (T - x_i)
+fn solve(t: f32, r: f32) -> (f32, f32) {
+    let tt = t/2.0;
+    let disc = f32::sqrt(tt*tt - r);
+    ( tt - disc, tt + disc )
+}
 
-fn run1(input: &str) -> u32 {
-    0
+fn run1(input: &str) -> f32 {
+    let mut res = 1.0;
+    for (t,r) in input.lines().nth(0).unwrap().split_once(':').unwrap().1.trim().split_whitespace().map(|s| s.parse::<f32>().unwrap()).zip(input.lines().nth(1).unwrap().split_once(':').unwrap().1.trim().split_whitespace().map(|s| s.parse::<f32>().unwrap())) {
+        let (a, b) = solve(t,r);
+        let m = f32::ceil(b - 1.0) - f32::floor(a);
+        println!("{m}");
+        res *= m;
+    }
+    res
 }
 
 fn run2(input: &str) -> u32 {
@@ -38,12 +46,12 @@ fn example1() {
     assert_eq!(res, 288);
 }
 
-//#[test]
-//fn input1() {
-    //let input = fs::read_to_string("input.txt").unwrap();
-    //let res = run1(&input);
-    //assert_eq!(res,42);
-//}
+#[test]
+fn input1() {
+    let input = fs::read_to_string("input.txt").unwrap();
+    let res = run1(&input);
+    assert_eq!(res, 1159152);
+}
 
 //#[test]
 //fn example2() {
