@@ -43,14 +43,14 @@ fn main() {
 fn example1() {
     let input = fs::read_to_string("test.txt").unwrap();
     let res = run1(&input);
-    assert_eq!(res, 288);
+    assert_eq!(res, 288.0);
 }
 
 #[test]
 fn input1() {
     let input = fs::read_to_string("input.txt").unwrap();
     let res = run1(&input);
-    assert_eq!(res, 1159152);
+    assert_eq!(res, 1159152.0);
 }
 
 //#[test]
