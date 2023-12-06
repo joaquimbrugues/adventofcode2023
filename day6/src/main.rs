@@ -35,7 +35,7 @@ fn main() {
 fn example1() {
     let input = fs::read_to_string("test.txt").unwrap();
     let res = run1(&input);
-    assert_eq!(res,42);
+    assert_eq!(res, 288);
 }
 
 //#[test]
