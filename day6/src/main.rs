@@ -10,15 +10,18 @@ fn run1(input: &str) -> f32 {
     let mut res = 1.0;
     for (t,r) in input.lines().nth(0).unwrap().split_once(':').unwrap().1.trim().split_whitespace().map(|s| s.parse::<f32>().unwrap()).zip(input.lines().nth(1).unwrap().split_once(':').unwrap().1.trim().split_whitespace().map(|s| s.parse::<f32>().unwrap())) {
         let (a, b) = solve(t,r);
-        let m = f32::ceil(b - 1.0) - f32::floor(a);
+        let m = f32::ceil(b) - f32::floor(a) - 1f32;
         println!("{m}");
         res *= m;
     }
     res
 }
 
-fn run2(input: &str) -> u32 {
-    0
+fn run2(input: &str) -> f32 {
+    let t = input.lines().nth(0).unwrap().split_once(':').unwrap().1.trim().split_whitespace().fold(String::from(""), |acc, s| format!("{acc}{s}")).parse::<f32>().unwrap();
+    let r = input.lines().nth(1).unwrap().split_once(':').unwrap().1.trim().split_whitespace().fold(String::from(""), |acc, s| format!("{acc}{s}")).parse::<f32>().unwrap();
+    let (a, b) = solve(t,r);
+    f32::ceil(b) - f32::floor(a) - 1f32
 }
 
 fn main() {
@@ -35,7 +38,7 @@ fn main() {
 
     let input = fs::read_to_string(filepath).unwrap();
 
-    let res = run1(&input);
+    let res = run2(&input);
     println!("{res}");
 }
 
@@ -53,16 +56,16 @@ fn input1() {
     assert_eq!(res, 1159152.0);
 }
 
-//#[test]
-//fn example2() {
-    //let input = fs::read_to_string("test.txt").unwrap();
-    //let res = run2(&input);
-    //assert_eq!(res,42);
-//}
+#[test]
+fn example2() {
+    let input = fs::read_to_string("test.txt").unwrap();
+    let res = run2(&input);
+    assert_eq!(res, 71503.0);
+}
 
-//#[test]
-//fn input2() {
-    //let input = fs::read_to_string("input.txt").unwrap();
-    //let res = run2(&input);
-    //assert_eq!(res,42);
-//}
+#[test]
+fn input2() {
+    let input = fs::read_to_string("input.txt").unwrap();
+    let res = run2(&input);
+    assert_eq!(res, 41513104.0);
+}
