@@ -2,7 +2,7 @@ use std::{env,fs,process};
 
 // Idea: each input has T and R (time and record) and we want to multiply every number in the range
 // of the integers solving the inequality T*x - x^2 >= R, i.e x^2 - T*x + R <= 0, so from
-// ceil(- sqrt( (T/2)^2 - R ) - T/2) until floor(sqrt( (T/2)^2 - R ) - T/2)
+// ceil(T/2 - sqrt( (T/2)^2 - R )) until floor(T/2 + sqrt( (T/2)^2 - R ))
 // CORRECTION: We want to multiply by x_i * (T - x_i)
 
 fn run1(input: &str) -> u32 {
