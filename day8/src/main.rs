@@ -27,8 +27,48 @@ fn run1(input: &str) -> u32 {
     steps
 }
 
-fn run2(input: &str) -> u32 {
-    0
+fn mcd(a: u64, b: u64) -> u64 {
+    if b == 0 {
+        a
+    } else {
+        mcd(b, a % b)
+    }
+}
+
+fn lcm(a: u64, b: u64) -> u64 {
+    (a * b) / mcd(a,b)
+}
+
+fn run2(input: &str) -> u64 {
+    let (head, tail) = input.split_once("\n\n").unwrap();
+    let head = head.trim();
+    let tree: HashMap<&str, (&str, &str)> = tail.lines().map(|line| {
+        let (mut head, tail) = line.split_once('=').unwrap();
+        head = head.trim();
+        let (mut left, mut right) = tail.split_once(", ").unwrap();
+        left = left.trim().strip_prefix('(').unwrap();
+        right = right.trim().strip_suffix(')').unwrap();
+        (head, (left, right))
+    }).collect();
+    let init_nodes: Vec<&str> = tail.lines().map(|line| line.split_once('=').unwrap().0.trim()).filter(|s| s.ends_with('A')).collect();
+
+    let mut acc = 1;
+    for n in init_nodes {
+        let mut steps = 0;
+        let mut map = head.chars().cycle();
+        let mut current_node = n;
+        while !current_node.ends_with('Z') {
+            let c = map.next().unwrap();
+            current_node = match c {
+                'L' => tree.get(current_node).unwrap().0,
+                'R' => tree.get(current_node).unwrap().1,
+                _ => unreachable!(),
+            };
+            steps += 1;
+        }
+        acc = lcm(acc, steps);
+    }
+    acc
 }
 
 fn main() {
@@ -45,7 +85,7 @@ fn main() {
 
     let input = fs::read_to_string(filepath).unwrap();
 
-    let res = run1(&input);
+    let res = run2(&input);
     println!("{res}");
 }
 
@@ -70,16 +110,16 @@ fn input1() {
     assert_eq!(res, 18023);
 }
 
-//#[test]
-//fn example2() {
-    //let input = fs::read_to_string("test.txt").unwrap();
-    //let res = run2(&input);
-    //assert_eq!(res,42);
-//}
+#[test]
+fn example23() {
+    let input = fs::read_to_string("test3.txt").unwrap();
+    let res = run2(&input);
+    assert_eq!(res, 6);
+}
 
-//#[test]
-//fn input2() {
-    //let input = fs::read_to_string("input.txt").unwrap();
-    //let res = run2(&input);
-    //assert_eq!(res,42);
-//}
+#[test]
+fn input2() {
+    let input = fs::read_to_string("input.txt").unwrap();
+    let res = run2(&input);
+    assert_eq!(res,14449445933179);
+}
