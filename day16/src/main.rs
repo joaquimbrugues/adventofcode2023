@@ -44,11 +44,8 @@ impl Dir {
     }
 }
 
-fn run1(input: &str) -> usize {
-    let array: Vec<Vec<_>> = input.lines().map(|line| {
-        line.chars().collect()
-    }).collect();
-    let mut queue = VecDeque::from([(0,0,Dir::Right)]);
+fn walk_map(array: &Vec<Vec<char>>, init: (usize, usize, Dir)) -> usize {
+    let mut queue = VecDeque::from([init]);
     let mut explored = HashSet::new();
     explored.insert(queue[0]);
     while let Some((i,j,dir)) = queue.pop_front() {
@@ -97,8 +94,47 @@ fn run1(input: &str) -> usize {
     explored.len()
 }
 
-fn run2(input: &str) -> u32 {
-    0
+fn run1(input: &str) -> usize {
+    let array: Vec<Vec<_>> = input.lines().map(|line| {
+        line.chars().collect()
+    }).collect();
+    walk_map(&array, (0,0,Dir::Right))
+}
+
+fn run2(input: &str) -> usize {
+    let array: Vec<Vec<_>> = input.lines().map(|line| {
+        line.chars().collect()
+    }).collect();
+    let mut res = 0;
+    // Top row
+    for j in 0..array[0].len() {
+        let r = walk_map(&array, (0, j, Dir::Down));
+        if r > res {
+            res = r;
+        }
+    }
+    // Bottom row
+    for j in 0..array[array.len()-1].len() {
+        let r = walk_map(&array, (array.len()-1, j, Dir::Up));
+        if r > res {
+            res = r;
+        }
+    }
+    // Left column
+    for i in 0..array.len() {
+        let r = walk_map(&array, (i, 0, Dir::Right));
+        if r > res {
+            res = r;
+        }
+    }
+    // Right column
+    for i in 0..array.len() {
+        let r = walk_map(&array, (i, array[i].len() - 1, Dir::Left));
+        if r > res {
+            res = r;
+        }
+    }
+    res
 }
 
 fn main() {
@@ -115,7 +151,7 @@ fn main() {
 
     let input = fs::read_to_string(filepath).unwrap();
 
-    let res = run1(&input);
+    let res = run2(&input);
     println!("{res}");
 }
 
@@ -133,16 +169,16 @@ fn input1() {
     assert_eq!(res, 7111);
 }
 
-//#[test]
-//fn example2() {
-    //let input = fs::read_to_string("test.txt").unwrap();
-    //let res = run2(&input);
-    //assert_eq!(res,42);
-//}
+#[test]
+fn example2() {
+    let input = fs::read_to_string("test.txt").unwrap();
+    let res = run2(&input);
+    assert_eq!(res, 51);
+}
 
-//#[test]
-//fn input2() {
-    //let input = fs::read_to_string("input.txt").unwrap();
-    //let res = run2(&input);
-    //assert_eq!(res,42);
-//}
+#[test]
+fn input2() {
+    let input = fs::read_to_string("input.txt").unwrap();
+    let res = run2(&input);
+    assert_eq!(res, 7831);
+}
