@@ -113,7 +113,75 @@ fn run1(input: &str) -> i32 {
     0
 }
 
-fn run2(input: &str) -> u32 {
+fn run2(input: &str) -> i32 {
+    let mut map = HashMap::new();
+    let mut height: isize = 0;
+    let mut width: isize = 0;
+    for (i,line) in input.lines().enumerate() {
+        let i = i as isize;
+        for (j, c) in line.chars().enumerate() {
+            let j = j as isize;
+            map.insert((i,j), - (c.to_digit(10).unwrap() as i32));
+            if j > width {
+                width = j;
+            }
+        }
+        if i > height {
+            height = i;
+        }
+    }
+    let mut heap = BinaryHeap::new();
+    let mut visited = HashSet::new();
+    heap.push(Node::from((0,0,0,Orientation::Hori)));
+    heap.push(Node::from((0,0,0,Orientation::Vert)));
+
+    while let Some(node) = heap.pop() {
+        if node.x == height && node.y == width {
+            return - node.loss;
+        }
+
+        if !visited.contains(&(node.x, node.y, node.ori)) {
+            visited.insert((node.x, node.y, node.ori));
+            let mut acc_loss = node.loss;
+            let mut next = (node.x, node.y);
+            for _ in 0..3 {
+                next = node.ori.next_pos(next);
+                if let Some(loss) = map.get(&next) {
+                    acc_loss += loss;
+                } else {
+                    break;
+                }
+            }
+            for _ in 3..10 {
+                next = node.ori.next_pos(next);
+                if let Some(loss) = map.get(&next) {
+                    acc_loss += loss;
+                    heap.push(Node::from((next.0, next.1, acc_loss, node.ori.opp())))
+                } else {
+                    break;
+                }
+            }
+            acc_loss = node.loss;
+            let mut next = (node.x, node.y);
+            for _ in 0..3 {
+                next = node.ori.next_neg(next);
+                if let Some(loss) = map.get(&next) {
+                    acc_loss += loss;
+                } else {
+                    break;
+                }
+            }
+            for _ in 3..10 {
+                next = node.ori.next_neg(next);
+                if let Some(loss) = map.get(&next) {
+                    acc_loss += loss;
+                    heap.push(Node::from((next.0, next.1, acc_loss, node.ori.opp())))
+                } else {
+                    break;
+                }
+            }
+        }
+    }
     0
 }
 
@@ -131,7 +199,7 @@ fn main() {
 
     let input = fs::read_to_string(filepath).unwrap();
 
-    let res = run1(&input);
+    let res = run2(&input);
     println!("{res}");
 }
 
@@ -149,16 +217,23 @@ fn input1() {
     assert_eq!(res, 742);
 }
 
-//#[test]
-//fn example2() {
-    //let input = fs::read_to_string("test.txt").unwrap();
-    //let res = run2(&input);
-    //assert_eq!(res,42);
-//}
+#[test]
+fn example2() {
+    let input = fs::read_to_string("test.txt").unwrap();
+    let res = run2(&input);
+    assert_eq!(res,94);
+}
 
-//#[test]
-//fn input2() {
-    //let input = fs::read_to_string("input.txt").unwrap();
-    //let res = run2(&input);
-    //assert_eq!(res,42);
-//}
+#[test]
+fn example3() {
+    let input = fs::read_to_string("test2.txt").unwrap();
+    let res = run2(&input);
+    assert_eq!(res,71);
+}
+
+#[test]
+fn input2() {
+    let input = fs::read_to_string("input.txt").unwrap();
+    let res = run2(&input);
+    assert_eq!(res,918);
+}
