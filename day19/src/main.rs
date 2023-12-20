@@ -91,7 +91,7 @@ fn run1(input: &str) -> u32 {
     }).sum()
 }
 
-fn run2(input: &str) -> u32 {
+fn run2(input: &str) -> usize {
     let xmas = HashMap::from([('x',0), ('m',1), ('a', 2), ('s', 3)]);
     let (rules, _) = input.split_once("\n\n").unwrap();
     let rules: HashMap<_, _> = rules.lines().map(|line| {
@@ -102,8 +102,57 @@ fn run2(input: &str) -> u32 {
     }).collect();
     assert!(rules.contains_key("in"));
 
+    //TODO: Must find a way to trim down time!
+    let mut res = 0;
+    for x in 1..=4000 {
+        for m in 1..=4000 {
+            for a in 1..=4000 {
+                for s in 1..=4000 {
+                    let mut label = "in";
+                    let mut reject = false;
+                    while !reject {
+                        for (cond, target) in rules.get(label).unwrap() {
+                            if cond.compare(&[x,m,a,s]) {
+                                match target {
+                                    Dest::A => {
+                                        res += 1;
+                                        reject = true;
+                                    },
+                                    Dest::R => reject = true,
+                                    Dest::Wf(r) => label = r,
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    println!("({x}, {m}, {a}, {s})");
+                }
+            }
+        }
+    }
+    res
 
-    0
+    //(1..=4000).zip(1..=4000)
+        //.zip(1..=4000)
+        //.zip(1..=4000)
+        //.map(|(((x,m),a),s)| [x,m,a,s])
+        //.filter(|marks| {
+            //let mut label = "in";
+            //loop {
+                //let rulev = rules.get(label).unwrap();
+                //for (cond, target) in rulev {
+                    //if cond.compare(marks) {
+                        //match target {
+                            //Dest::A => return true,
+                            //Dest::R => return false,
+                            //Dest::Wf(s) => label = s,
+                        //}
+                        //break;
+                    //}
+                //}
+            //}
+        //})
+        //.count()
 }
 
 fn main() {
@@ -138,12 +187,12 @@ fn input1() {
     assert_eq!(res, 348378);
 }
 
-//#[test]
-//fn example2() {
-    //let input = fs::read_to_string("test.txt").unwrap();
-    //let res = run2(&input);
-    //assert_eq!(res,42);
-//}
+#[test]
+fn example2() {
+    let input = fs::read_to_string("test.txt").unwrap();
+    let res = run2(&input);
+    assert_eq!(res, 167409079868000);
+}
 
 //#[test]
 //fn input2() {
