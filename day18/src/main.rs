@@ -136,10 +136,9 @@ fn run1(input: &str) -> u64 {
 }
 
 fn parse_num(input: &str) -> (Dir, i64) {
-    let mut it = input.chars().rev();
-    let d = Dir::from_char(it.next().unwrap()).unwrap();
+    let d = Dir::from_char(input.chars().last().unwrap()).unwrap();
     let mut n = 0;
-    while let Some(c) = it.next() {
+    for c in input[0..input.len()-1].chars() {
         n *= 16;
         n += c.to_digit(16).unwrap() as i64;
     }
@@ -150,9 +149,11 @@ fn run2(input: &str) -> i64 {
     use Dir::*;
 
     let mut vertices: Vec<(i64,i64)> = vec![(0,0)];
+    let mut boundary = 0;
     for line in input.lines() {
         let line = line.rsplit_once(' ').unwrap().1.strip_prefix("(#").unwrap().strip_suffix(')').unwrap();
         let (d,n) = parse_num(line);
+        boundary += n;
         let (i,j) = vertices.last().unwrap();
         match d {
             Up => vertices.push(((i-n),*j)),
@@ -161,9 +162,14 @@ fn run2(input: &str) -> i64 {
             Right => vertices.push((*i,(j + n))),
         }
     }
-    let s: i64 = vertices.iter().zip(vertices.iter().skip(1)).map(|((x1,y1), (x2,y2))| x1*y2 - y1*x2).sum();
+    // Shoelace formula - A = s / 2
+    let s: i64 = vertices.iter().zip(vertices.iter().skip(1)).map(|((x1,y1), (x2,y2))| x1*y2 - y1*x2).sum::<i64>().abs();
+    // Pick's theorem: 2*A = 2*i + b - 2,
+    // Where i is the number of internal nodes and
+    // b is the number of boundary nodes
+    let interior = (s - boundary) / 2 + 1;
 
-    s.abs() / 2
+    interior + boundary
 }
 
 fn main() {
