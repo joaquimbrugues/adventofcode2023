@@ -48,6 +48,38 @@ impl Cond {
             Self::Gt(i,n) => marks[i] > n,
         }
     }
+
+    fn split_intervals(&self, mut intervals: [(u32,u32);4]) -> (([(u32,u32);4], bool), Option<([(u32,u32);4], bool)>) {
+        match *self {
+            Self::Void => {
+                ((intervals, true), None)
+            },
+            Self::Lt(i,n) => {
+                if n <= intervals[i].0 {
+                    ((intervals, false), None)
+                } else if n > intervals[i].1 {
+                    ((intervals, true), None)
+                } else {
+                    let mut iintervals = intervals;
+                    intervals[i].1 = n-1;
+                    iintervals[i].0 = n-1;
+                    ((intervals, true), Some((iintervals, false)))
+                }
+            },
+            Self::Gt(i,n) => {
+                if n >= intervals[i].1 {
+                    ((intervals, false), None)
+                } else if n < intervals[i].0 {
+                    ((intervals, true), None)
+                } else {
+                    let mut iintervals = intervals;
+                    intervals[i].1 = n;
+                    iintervals[i].0 = n;
+                    ((intervals, false), Some((iintervals, true)))
+                }
+            },
+        }
+    }
 }
 
 fn run1(input: &str) -> u32 {
@@ -91,7 +123,40 @@ fn run1(input: &str) -> u32 {
     }).sum()
 }
 
-fn run2(input: &str) -> usize {
+fn process_rule(rules: &HashMap<&str, Vec<(Cond,Dest)>>, dest: &Dest, mut intervals: [(u32,u32);4]) -> i64 {
+    match dest {
+        Dest::A => intervals.into_iter().map(|(a,b)| i64::from(b - a)).product(),
+        Dest::R => 0,
+        Dest::Wf(label) => {
+            let mut count = 0;
+            for (cond, dest) in rules.get(label).unwrap() {
+                let ((i1, b1), o) = cond.split_intervals(intervals);
+                match o {
+                    Some((i2,b2)) => {
+                        if b1 {
+                            count += process_rule(rules, dest, i1);
+                            intervals = i2;
+                        } else if b2 {
+                            count += process_rule(rules, dest, i2);
+                            intervals = i1;
+                        } else {
+                            panic!("Horrible mistake(?)")
+                        }
+                    },
+                    None => {
+                        if b1 {
+                            return count + process_rule(rules, dest, i1);
+                        }
+                        intervals = i1;
+                    },
+                }
+            }
+            count
+        },
+    }
+} 
+
+fn run2(input: &str) -> i64 {
     let xmas = HashMap::from([('x',0), ('m',1), ('a', 2), ('s', 3)]);
     let (rules, _) = input.split_once("\n\n").unwrap();
     let rules: HashMap<_, _> = rules.lines().map(|line| {
@@ -102,57 +167,9 @@ fn run2(input: &str) -> usize {
     }).collect();
     assert!(rules.contains_key("in"));
 
-    //TODO: Must find a way to trim down time!
-    let mut res = 0;
-    for x in 1..=4000 {
-        for m in 1..=4000 {
-            for a in 1..=4000 {
-                for s in 1..=4000 {
-                    let mut label = "in";
-                    let mut reject = false;
-                    while !reject {
-                        for (cond, target) in rules.get(label).unwrap() {
-                            if cond.compare(&[x,m,a,s]) {
-                                match target {
-                                    Dest::A => {
-                                        res += 1;
-                                        reject = true;
-                                    },
-                                    Dest::R => reject = true,
-                                    Dest::Wf(r) => label = r,
-                                }
-                                break;
-                            }
-                        }
-                    }
-                    println!("({x}, {m}, {a}, {s})");
-                }
-            }
-        }
-    }
-    res
+    let mut intervals = [(0,4000); 4];
 
-    //(1..=4000).zip(1..=4000)
-        //.zip(1..=4000)
-        //.zip(1..=4000)
-        //.map(|(((x,m),a),s)| [x,m,a,s])
-        //.filter(|marks| {
-            //let mut label = "in";
-            //loop {
-                //let rulev = rules.get(label).unwrap();
-                //for (cond, target) in rulev {
-                    //if cond.compare(marks) {
-                        //match target {
-                            //Dest::A => return true,
-                            //Dest::R => return false,
-                            //Dest::Wf(s) => label = s,
-                        //}
-                        //break;
-                    //}
-                //}
-            //}
-        //})
-        //.count()
+    process_rule(&rules, &Dest::Wf( "in"), intervals)
 }
 
 fn main() {
@@ -194,9 +211,9 @@ fn example2() {
     assert_eq!(res, 167409079868000);
 }
 
-//#[test]
-//fn input2() {
-    //let input = fs::read_to_string("input.txt").unwrap();
-    //let res = run2(&input);
-    //assert_eq!(res,42);
-//}
+#[test]
+fn input2() {
+    let input = fs::read_to_string("input.txt").unwrap();
+    let res = run2(&input);
+    assert_eq!(res,121158073425385);
+}
