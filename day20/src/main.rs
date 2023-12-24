@@ -1,88 +1,181 @@
 use std::{env,fs,process};
 use std::collections::{HashMap,VecDeque};
+use std::cell::RefCell;
 
 // Boolean - PulseType
 // false   - low
 // true    - high
-
-#[derive(Debug,PartialEq, Eq, Clone,)]
+#[derive(Debug,PartialEq,Eq,Clone,)]
 enum ModuleType<'a> {
-    FlipFlop(bool),
-    Conj(HashMap<&'a str, bool>),
     Broadcast,
+    FlipFlop(RefCell<bool>),
+    Conjunction(RefCell<HashMap<&'a str, bool>>),
 }
 
 impl<'a> ModuleType<'a> {
-    fn process_signal(&'a mut self, signal: bool, origin: &'a str) -> Option<bool> {
+    fn broadcast() -> Self {
+        Self::Broadcast
+    }
+
+    fn flipflop() -> Self {
+        Self::FlipFlop(RefCell::new(false))
+    }
+
+    fn conjunction() -> Self {
+        Self::Conjunction(RefCell::new(HashMap::new()))
+    }
+
+    fn process_signal(&'a self, signal: bool, from: &'a str) -> Option<bool> {
         match self {
-            Self::FlipFlop(state) => {
-                if signal {
-                    None
-                } else {
+            Self::Broadcast => Some(signal),
+            Self::FlipFlop(cell) => {
+                if !signal {
+                    let state = &mut *cell.borrow_mut();
                     *state = !*state;
                     Some(*state)
+                } else {
+                    None
                 }
             },
-            Self::Conj(memory) => {
-                memory.insert(origin, signal);
-                if memory.values().fold(true, |acc, b| acc & b) {
+            Self::Conjunction(cell) => {
+                let mut table = cell.borrow_mut();
+                if table.insert(from, signal).is_none() {
+                    panic!("Signal received from module {from}, which was unregistered for this conjuction module!");
+                }
+                if table.values().fold(true, |acc, &s| acc && s) {
                     Some(false)
                 } else {
                     Some(true)
                 }
             },
-            Self::Broadcast => Some(signal),
-        }
-    }
-
-    fn is_conj(&self) -> bool {
-        match self {
-            Self::Conj(_) => true,
-            _ => false,
         }
     }
 }
 
-#[derive(Debug,)]
+#[derive(Debug)]
 struct Module<'a> {
     kind: ModuleType<'a>,
-    dests: Vec<&'a str>,
+    neighs: Vec<&'a str>,
 }
 
 impl<'a> Module<'a> {
-    fn parse(line: &'a str) -> (&'a str, Self) {
-        let (head, tail) = line.split_once("->").unwrap();
-        let head = head.trim();
-        let dests = tail.split(',').map(|s| s.trim()).collect();
-        let kind = if let Some(head) = head.strip_prefix('%') {
-            // Flip-Flop
-            ModuleType::FlipFlop(false)
-        } else if let Some(head) = head.strip_prefix('&') {
-            // Conjunction
-            ModuleType::Conj(HashMap::new())
-        } else {
-            // Broadcast
-            ModuleType::Broadcast
-        };
-        (head, Self { kind, dests, })
+    fn new(kind: ModuleType<'a>) -> Self {
+        Self { kind, neighs: Vec::new(), }
+    }
+
+    fn parse_input(input: &'a str) -> HashMap<&'a str, Self> {
+        // First just collect the labels
+        let mut map: HashMap<&str, Self> = input.lines().map(|line| {
+            let (label, _) = line.split_once("->").unwrap();
+            let label = label.trim();
+            if let Some(label) = label.strip_prefix('%') {
+                (label, Self::new(ModuleType::flipflop()))
+            } else if let Some(label) = label.strip_prefix('&') {
+                (label, Self::new(ModuleType::conjunction()))
+            } else {
+                (label, Self::new(ModuleType::broadcast()))
+            }
+        }).collect();
+        assert_eq!(map.values().fold(0, |acc, m| {
+            if m.kind == ModuleType::Broadcast {
+                acc + 1
+            } else {
+                acc
+            }
+        }), 1);
+
+        for line in input.lines() {
+            let (label, ns) = line.split_once("->").unwrap();
+            let label = if let Some(l) = label.trim().strip_prefix('%') {
+                l
+            } else if let Some(l) = label.trim().strip_prefix('&') {
+                l
+            } else {
+                label.trim()
+            };
+
+            for n in ns.split(',').map(|s| s.trim()) {
+                map.get_mut(label).unwrap().neighs.push(n);
+                if let Some(module) = map.get(n) {
+                    if let ModuleType::Conjunction(cell) = &module.kind {
+                        // Initialize conjunction module
+                        cell.borrow_mut().insert(label, false);
+                    }
+                }
+            }
+        }
+
+        map
     }
 }
 
-fn parse_input(input: &str) -> HashMap<&str, Module> {
-    let mut graph: HashMap<_,_> = input.lines().map(|line| Module::parse(line)).collect();
-    // Assert that the graph has exactly one broadcaster module
-    assert_eq!(graph.values().filter(|module| module.kind == ModuleType::Broadcast).count(), 1);
-    // Initialize conjugator modules
-
-    graph
-}
-
 fn run1(input: &str) -> u32 {
-    0
+    let graph = Module::parse_input(input);
+
+    let mut low_pulses = 0;
+    let mut high_pulses = 0;
+
+    for _ in 0..1000 {
+        let mut queue = VecDeque::new();
+        queue.push_back((false, "button", "broadcaster"));
+        while let Some((signal, from, to)) = queue.pop_front() {
+            //println!("{from} - {signal} > {to}");
+            if signal {
+                high_pulses += 1;
+            } else {
+                low_pulses += 1;
+            }
+
+            if let Some(module) = graph.get(to) {
+                let signal = module.kind.process_signal(signal, from);
+                if let Some(signal) = signal {
+                    for n in module.neighs.iter() {
+                        queue.push_back((signal, to, n));
+                    }
+                }
+            }
+        }
+    }
+
+    low_pulses * high_pulses
 }
 
-fn run2(input: &str) -> u32 {
-    0
+fn run2(input: &str) -> u64 {
+    let graph = Module::parse_input(input);
+
+    let precedents: Vec<_> = graph.iter().filter(|(_, module)| module.neighs.contains(&"rx")).map(|(label,_)| label).collect();
+    assert_eq!(precedents.len(), 1);
+    let precedent = precedents[0];
+    let mut periods: HashMap<&str, u64> = graph.iter().filter(|(_, module)| module.neighs.contains(precedent)).map(|(&label, _)| (label, 0)).collect();
+
+    let mut pulses = 0;
+    while periods.values().any(|&n| n == 0) {
+        pulses += 1;
+        let mut queue = VecDeque::new();
+        queue.push_back((false, "button", "broadcaster"));
+        while let Some((signal, from, to)) = queue.pop_front() {
+            //println!("{from} - {signal} > {to}");
+            if signal && periods.keys().any(|l| l == &from) {
+                // {precedent} was sent a positive signal.
+                // Register it in periods if it was not previously registered
+                let mut count = periods.get_mut(from).unwrap();
+                if *count == 0 {
+                    *count = pulses;
+                }
+            }
+
+            if let Some(module) = graph.get(to) {
+                let signal = module.kind.process_signal(signal, from);
+                if let Some(signal) = signal {
+                    for n in module.neighs.iter() {
+                        queue.push_back((signal, to, n));
+                    }
+                }
+            }
+        }
+    }
+
+    periods.values().product()
 }
 
 fn main() {
@@ -99,7 +192,7 @@ fn main() {
 
     let input = fs::read_to_string(filepath).unwrap();
 
-    let res = run1(&input);
+    let res = run2(&input);
     println!("{res}");
 }
 
@@ -117,23 +210,16 @@ fn example12() {
     assert_eq!(res, 11687500);
 }
 
-//#[test]
-//fn input1() {
-    //let input = fs::read_to_string("input.txt").unwrap();
-    //let res = run1(&input);
-    //assert_eq!(res,42);
-//}
+#[test]
+fn input1() {
+    let input = fs::read_to_string("input.txt").unwrap();
+    let res = run1(&input);
+    assert_eq!(res, 819397964);
+}
 
-//#[test]
-//fn example2() {
-    //let input = fs::read_to_string("test.txt").unwrap();
-    //let res = run2(&input);
-    //assert_eq!(res,42);
-//}
-
-//#[test]
-//fn input2() {
-    //let input = fs::read_to_string("input.txt").unwrap();
-    //let res = run2(&input);
-    //assert_eq!(res,42);
-//}
+#[test]
+fn input2() {
+    let input = fs::read_to_string("input.txt").unwrap();
+    let res = run2(&input);
+    assert_eq!(res, 252667369442479);
+}
