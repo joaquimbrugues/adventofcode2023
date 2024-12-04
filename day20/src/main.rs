@@ -158,7 +158,8 @@ fn run2(input: &str) -> u64 {
             if signal && periods.keys().any(|l| l == &from) {
                 // {precedent} was sent a positive signal.
                 // Register it in periods if it was not previously registered
-                let mut count = periods.get_mut(from).unwrap();
+                //let mut count = periods.get_mut(from).unwrap();
+                let count = periods.get_mut(from).unwrap();
                 if *count == 0 {
                     *count = pulses;
                 }

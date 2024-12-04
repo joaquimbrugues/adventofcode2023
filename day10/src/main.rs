@@ -93,6 +93,8 @@ fn get_loop(starting: (i32, i32), pipes: &HashMap<(i32,i32), (Direction, Directi
                 break;
             }
         }
+        // If next falls into S the previous loop will have exited, because those coordinates map
+        // in pipes to None
         if next.0 == starting {
             return (cycle, dir, next.1);
         }
@@ -219,7 +221,7 @@ fn main() {
 #[test]
 fn example1() {
     let input = fs::read_to_string("test.txt").unwrap();
-    let res = run1(&input);
+    let res = run2(&input);
     assert_eq!(res, 8);
 }
 

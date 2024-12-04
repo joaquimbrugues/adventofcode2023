@@ -167,7 +167,8 @@ fn run2(input: &str) -> i64 {
     }).collect();
     assert!(rules.contains_key("in"));
 
-    let mut intervals = [(0,4000); 4];
+    //let mut intervals = [(0,4000); 4];
+    let intervals = [(0,4000); 4];
 
     process_rule(&rules, &Dest::Wf( "in"), intervals)
 }
